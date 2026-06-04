@@ -1,152 +1,144 @@
-<!DOCTYPE html>
-<html lang="es" data-theme="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-    <meta name="description" content="Cámara en vivo desde Barra da Lagoa">
-    <meta name="keywords" content="camara, vivo, youtube, barra da lagoa, playa, brasil, vacaciones, viaje grupal, amigos, aventura">
-    <meta name="author" content="Kikiriya DevOps by Andres">
-    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-    <meta name="googlebot" content="index, follow">
-    <meta name="language" content="Spanish">
-    <meta name="theme-color" content="#0f4c2a" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#0a2e19" media="(prefers-color-scheme: dark)">
-    <link rel="canonical" href="https://camara.xpz/">
 
-    <meta name="theme-color" content="orange">
-      
-    <title>Cámara en Vivo | Barra da Lagoa</title>
+    const CONFIG = {
+        videoId: 'FfYGm9oeiwk',
+        apiScript: 'https://www.youtube.com/iframe_api'
+    };
 
-  <!-- ============ FAVICONS ============ -->
-  <link rel="icon" type="image/png" href="./icons/72.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="./icons/72.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="./icons/72.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-192.png">
-  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#0f4c2a">
+    let player = null;
+    let esVisible = false;
+    let apiCargada = false;
+    let apiError = false;
 
-  
+    const boton = document.getElementById('btnControlCamara');
+    const btnLabel = boton.querySelector('.btn-label');
+    const contenedor = document.getElementById('contenedorCamara');
+    const loader = document.getElementById('loaderCamara');
+    const videoWrapper = document.getElementById('videoWrapper');
+    const thumbnailOverlay = document.getElementById('thumbnailOverlay');
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&family=Space+Grotesk:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    // ============ CARGA API YOUTUBE ============
+    function cargarAPI() {
+        if (window.YT && window.YT.Player) { apiCargada = true; return; }
 
-  <!-- ============ OPEN GRAPH ============ -->
-  <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Cámara en Vivo ">
-  <meta property="og:title" content="Cámara en Vivo | Barra da Lagoa!">
-  <meta property="og:description" content="El viaje grupal que siempre soñaron. Playas, aventuras y recuerdos para toda la vida. ¡Esta vez sí va!">
-  <meta property="og:url" content="https://alasrisas.xpz/">
-  <meta property="og:image" content="./icons/72.png">
-  <meta property="og:image:secure_url" content="./icons/152.png">
-  <meta property="og:image:type" content="./icons/logoGPT 21kb.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Camara en vivo desde Barra da Lagoa, Florianópolis, Brasil">
-  <meta property="og:locale" content="es_UY">
-  <meta property="og:locale:alternate" content="es_ES">
+        const tag = document.createElement('script');
+        tag.src = CONFIG.apiScript;
+        tag.async = true;
+        tag.onerror = () => {
+            apiError = true;
+            console.error('Error al cargar YouTube API');
+        };
 
-  <!-- ============ TWITTER ============ -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:site" content="@alasrisas">
-  <meta name="twitter:creator" content="@alasrisas">
-  <meta name="twitter:title" content="¡Cámara en Vivo | Barra da Lagoa!!">
-  <meta name="twitter:description" content="El viaje grupal que siempre soñaron. ¡Esta vez sí va!">
-  <meta name="twitter:image" content="./icons/LargeTile.scale-400.png">
-  <meta name="twitter:image:alt" content="Amigos del barrio en la playa de Florianópolis">
+        const firstScript = document.getElementsByTagName('script')[0];
+        firstScript.parentNode.insertBefore(tag, firstScript);
+    }
 
-  <!-- ============ PWA ============ -->
-    <!-- ============ PWA META TAGS 
-     (Opcional) Si agregaste el manifest para PWA, va aquí 
-     ============ -->
-     <meta name="application-name" content="camarita">
-    <link rel="manifest" href="manifest.json">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Cámara Ao Vivo">
-    <link rel="apple-touch-icon" href="icons/LargeTile.scale-200.png">
-    
-    
-    <!-- ============ PRELOAD DEL THUMBNAIL ============ -->
-    <link rel="preload" as="image" href="https://img.youtube.com/vi/FfYGm9oeiwk/maxresdefault.jpg">
+    window.onYouTubeIframeAPIReady = function() {
+        apiCargada = true;
+        inicializarPlayer();
+    };
 
-    <link rel="stylesheet" href="styles/styles.css">
-    
-    <!-- <style>
-    </style> -->
-</head>
-<body>
+    function inicializarPlayer() {
+        if (player) return;
+        try {
+            player = new YT.Player('player', {
+                videoId: CONFIG.videoId,
+                playerVars: {
+                    playsinline: 1,
+                    autoplay: 0,
+                    controls: 1,
+                    mute: 1,
+                    rel: 0,
+                    modestbranding: 1,
+                    origin: window.location.origin
+                },
+                events: {
+                    onReady: onPlayerReady,
+                    onStateChange: onPlayerStateChange,
+                    onError: onPlayerError
+                }
+            });
+        } catch (err) {
+            apiError = true;
+            console.error(err);
+        }
+    }
 
-<section class="seccion-camara" aria-labelledby="titulo-camara">
-    <header class="camara-header">
-        <span class="live-badge" aria-label="Transmisión en vivo">
-            <span class="live-indicator" aria-hidden="true"></span>
-            EN VIVO
-        </span>
-        <section class="camara-title-section">
-           <img src="./icons/logoGPT 21kb.png" 
-             alt="Ícono de sitio" 
-             class="camara-icon"
-             aria-hidden="true" width="50px" >
-          <h2 id="titulo-camara" class="camara-title">Cámara en Vivo</h2>
-        </section>
-        <p class="camara-subtitle">Barra da Lagoa · Transmisión 24/7</p>       
-    </header>
-    
-    <button 
-        id="btnControlCamara" 
-        class="btn-control"
-        aria-controls="contenedorCamara"
-        aria-expanded="false">
-        <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M8 5v14l11-7z"/>
-        </svg>
-        <span class="btn-label">Ver Cámara</span>
-    </button>
+    function onPlayerReady(event) {
+        const iframe = document.querySelector('.video-wrapper iframe');
+        if (iframe) {
+            iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen; camera');
+        }
+    }
 
-    <div id="contenedorCamara" hidden style="width: 100%; max-width: 960px;">
-        <div class="video-wrapper" id="videoWrapper">
-            
-            <!-- THUMBNAIL PREVIEW (carga ligera ~30KB vs 2MB iframe) -->
-            <img 
-                id="thumbnailPreview"
-                class="thumbnail-preview"
-                src="https://img.youtube.com/vi/FfYGm9oeiwk/maxresdefault.jpg"
-                alt="Vista previa de la cámara en vivo de Barra da Lagoa"
-                loading="eager"
-                onerror="this.src='https://img.youtube.com/vi/FfYGm9oeiwk/hqdefault.jpg'">
-            
-            <div class="thumbnail-overlay" id="thumbnailOverlay">
-                <div class="play-button-overlay">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M8 5v14l11-7z"/>
-                    </svg>
-                </div>
-                <span class="thumbnail-label">▶ Reproducir transmisión en vivo</span>
-            </div>
+    function onPlayerStateChange(event) {
+        if (event.data === YT.PlayerState.PLAYING) {
+            videoWrapper.classList.add('video-loaded');
+            loader.classList.remove('is-visible');
+        } else if (event.data === YT.PlayerState.BUFFERING) {
+            loader.classList.add('is-visible');
+        }
+    }
 
-            <!-- Loader (solo aparece mientras carga el iframe) -->
-            <div id="loaderCamara" class="loader-camara" role="status" aria-live="polite">
-                <div class="spinner" aria-hidden="true"></div>
-                <span class="texto-loader">Cargando reproductor...</span>
-                <small class="loader-subtexto">Esto puede tardar unos segundos</small>
-            </div>
-            
-            <div id="player"></div>
-        </div>
-    </div>
-</section>
-<!-- 
-<script>
-(function() {
-    'use strict';
-})();
-</script> -->
+    function onPlayerError(event) {
+        console.error('Error del reproductor:', event.data);
+    }
 
-<script src="script.min.js" defer></script>
+    // ============ ACTIVAR VIDEO (botón o thumbnail) ============
+    function activarVideo() {
+        if (!apiCargada) {
+            inicializarPlayer();
+        }
 
-</body>
-</html>
+        loader.classList.add('is-visible');
+        contenedor.hidden = false;
+        boton.setAttribute('aria-expanded', 'true');
+
+        const intervalo = setInterval(() => {
+            if (player && typeof player.playVideo === 'function') {
+                player.playVideo();
+                clearInterval(intervalo);
+            }
+        }, 100);
+
+        btnLabel.textContent = 'Pausar y Ocultar';
+        boton.classList.add('is-active');
+        boton.querySelector('.btn-icon').innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+        esVisible = true;
+    }
+
+    // Click en el thumbnail también activa el video
+    thumbnailOverlay.addEventListener('click', activarVideo);
+
+    boton.addEventListener('click', () => {
+        if (apiError) {
+            alert('Hay un problema con el reproductor. Recarga la página.');
+            return;
+        }
+
+        if (!esVisible) {
+            activarVideo();
+        } else {
+            if (player && typeof player.pauseVideo === 'function') {
+                player.pauseVideo();
+            }
+            contenedor.hidden = true;
+            videoWrapper.classList.remove('video-loaded');
+            btnLabel.textContent = 'Ver Cámara';
+            boton.classList.remove('is-active');
+            boton.setAttribute('aria-expanded', 'false');
+            boton.querySelector('.btn-icon').innerHTML = '<path d="M8 5v14l11-7z"/>';
+            esVisible = false;
+        }
+    });
+
+    cargarAPI();
+
+    // ============ REGISTRO DEL SERVICE WORKER (PWA) ============
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('✅ SW registrado:', reg.scope))
+                .catch(err => console.log('❌ SW error:', err));
+        });
+    }
