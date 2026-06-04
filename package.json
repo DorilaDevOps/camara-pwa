@@ -1,0 +1,19 @@
+{
+  "name": "camaravivo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "script.min.js",
+  "scripts": {
+    "build:css": "css-minify -d styles -o dist",
+    "build:js": "terser script.js -o dist/script.min.js -c -m",
+    "build": "npm run build:css && npm run build:js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "css-minify": "^2.1.0",
+    "terser": "^5.48.0"
+  }
+}

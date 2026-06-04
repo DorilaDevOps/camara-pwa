@@ -1,0 +1,144 @@
+
+
+    const CONFIG = {
+        videoId: 'FfYGm9oeiwk',
+        apiScript: 'https://www.youtube.com/iframe_api'
+    };
+
+    let player = null;
+    let esVisible = false;
+    let apiCargada = false;
+    let apiError = false;
+
+    const boton = document.getElementById('btnControlCamara');
+    const btnLabel = boton.querySelector('.btn-label');
+    const contenedor = document.getElementById('contenedorCamara');
+    const loader = document.getElementById('loaderCamara');
+    const videoWrapper = document.getElementById('videoWrapper');
+    const thumbnailOverlay = document.getElementById('thumbnailOverlay');
+
+    // ============ CARGA API YOUTUBE ============
+    function cargarAPI() {
+        if (window.YT && window.YT.Player) { apiCargada = true; return; }
+
+        const tag = document.createElement('script');
+        tag.src = CONFIG.apiScript;
+        tag.async = true;
+        tag.onerror = () => {
+            apiError = true;
+            console.error('Error al cargar YouTube API');
+        };
+
+        const firstScript = document.getElementsByTagName('script')[0];
+        firstScript.parentNode.insertBefore(tag, firstScript);
+    }
+
+    window.onYouTubeIframeAPIReady = function() {
+        apiCargada = true;
+        inicializarPlayer();
+    };
+
+    function inicializarPlayer() {
+        if (player) return;
+        try {
+            player = new YT.Player('player', {
+                videoId: CONFIG.videoId,
+                playerVars: {
+                    playsinline: 1,
+                    autoplay: 0,
+                    controls: 1,
+                    mute: 1,
+                    rel: 0,
+                    modestbranding: 1,
+                    origin: window.location.origin
+                },
+                events: {
+                    onReady: onPlayerReady,
+                    onStateChange: onPlayerStateChange,
+                    onError: onPlayerError
+                }
+            });
+        } catch (err) {
+            apiError = true;
+            console.error(err);
+        }
+    }
+
+    function onPlayerReady(event) {
+        const iframe = document.querySelector('.video-wrapper iframe');
+        if (iframe) {
+            iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
+        }
+    }
+
+    function onPlayerStateChange(event) {
+        if (event.data === YT.PlayerState.PLAYING) {
+            videoWrapper.classList.add('video-loaded');
+            loader.classList.remove('is-visible');
+        } else if (event.data === YT.PlayerState.BUFFERING) {
+            loader.classList.add('is-visible');
+        }
+    }
+
+    function onPlayerError(event) {
+        console.error('Error del reproductor:', event.data);
+    }
+
+    // ============ ACTIVAR VIDEO (botón o thumbnail) ============
+    function activarVideo() {
+        if (!apiCargada) {
+            inicializarPlayer();
+        }
+
+        loader.classList.add('is-visible');
+        contenedor.hidden = false;
+        boton.setAttribute('aria-expanded', 'true');
+
+        const intervalo = setInterval(() => {
+            if (player && typeof player.playVideo === 'function') {
+                player.playVideo();
+                clearInterval(intervalo);
+            }
+        }, 100);
+
+        btnLabel.textContent = 'Pausar y Ocultar';
+        boton.classList.add('is-active');
+        boton.querySelector('.btn-icon').innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+        esVisible = true;
+    }
+
+    // Click en el thumbnail también activa el video
+    thumbnailOverlay.addEventListener('click', activarVideo);
+
+    boton.addEventListener('click', () => {
+        if (apiError) {
+            alert('Hay un problema con el reproductor. Recarga la página.');
+            return;
+        }
+
+        if (!esVisible) {
+            activarVideo();
+        } else {
+            if (player && typeof player.pauseVideo === 'function') {
+                player.pauseVideo();
+            }
+            contenedor.hidden = true;
+            videoWrapper.classList.remove('video-loaded');
+            btnLabel.textContent = 'Ver Cámara';
+            boton.classList.remove('is-active');
+            boton.setAttribute('aria-expanded', 'false');
+            boton.querySelector('.btn-icon').innerHTML = '<path d="M8 5v14l11-7z"/>';
+            esVisible = false;
+        }
+    });
+
+    cargarAPI();
+
+    // ============ REGISTRO DEL SERVICE WORKER (PWA) ============
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('✅ SW registrado:', reg.scope))
+                .catch(err => console.log('❌ SW error:', err));
+        });
+    }
