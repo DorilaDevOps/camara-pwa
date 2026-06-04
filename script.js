@@ -1,5 +1,3 @@
-
-
     const CONFIG = {
         videoId: 'FfYGm9oeiwk',
         apiScript: 'https://www.youtube.com/iframe_api'
@@ -67,7 +65,7 @@
     function onPlayerReady(event) {
         const iframe = document.querySelector('.video-wrapper iframe');
         if (iframe) {
-            iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
+            iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen; camera');
         }
     }
 
